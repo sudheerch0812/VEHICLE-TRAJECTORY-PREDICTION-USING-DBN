@@ -1,0 +1,111 @@
+1. Multi-View LSTM (MV-LSTM) Encoder:
+The Multi-View LSTM (MV-LSTM) Encoder is the foundational module in vehicle trajectory
+prediction models, capturing the sequential nature of vehicle movement. The key role of this module is
+to encode the historical trajectory data of multiple vehicles into hidden states that summarize past
+behaviours and interactions between vehicles.
+1.1 LSTM (Long Short-Term Memory) Networks
+LSTM networks are a type of recurrent neural network (RNN) widely used to model time-series data
+due to their ability to capture long-term dependencies while mitigating issues of vanishing gradients. In
+the context of vehicle trajectory prediction, LSTMs encode the time-series data of vehicle positions
+over time into a hidden representation, preserving both short-term and long-term dependencies in
+vehicle behaviour. Each vehicle's state at a given time step (e.g., position, velocity, and heading) is
+passed through the LSTM, and its output at each time step is used for predicting the next trajectory
+point.
+- Structure: LSTMs consist of memory cells that store information across time steps and are controlled
+by gates (input, forget, and output gates). These gates regulate the flow of information, allowing the
+LSTM to retain relevant details from past inputs while forgetting irrelevant details. This is particularly
+crucial for vehicle trajectory prediction, where vehicles may follow patterns that vary in complexity,
+such as changing lanes or adjusting speeds based on traffic.
+- Temporal Dependency Modelling: The recurrent nature of LSTMs makes them suitable for modelling
+time-dependent vehicle movements, as future positions depend heavily on past movements. By
+analysing historical positions, the LSTM encoder provides an accurate temporal embedding that reflects
+the vehicle’s past trajectory.
+- Stochastic Aspects: While traditional LSTMs capture deterministic temporal relationships, in
+stochastic trajectory prediction models, uncertainty is incorporated in the LSTM’s output, reflecting the
+inherent variability in real-world traffic behaviour. This could be achieved by sampling from
+distributions learned by the LSTM during training or adding noise to reflect prediction uncertainty.
+1.2 Graph Attention Networks (GAT)
+Graph Attention Networks (GATs) are used in this architecture to capture interactions between vehicles
+by modelling their spatial relationships. The core idea of GAT is to represent the vehicle positions and
+dynamics as a graph, where each node represents a vehicle, and edges represent the interactions or
+influence between nearby vehicles.
+- Graph Representation of Traffic: In this module, each vehicle is treated as a node in a graph. The edges
+between the nodes (vehicles) are weighted based on their spatial proximity or interaction strength. For
+instance, vehicles closer together or moving in the same direction may have stronger connections
+(weights), as their trajectories are more likely to influence each other.
+- Attention Mechanism: The attention mechanism in GAT assigns different levels of importance to
+different neighbours (i.e., nearby vehicles). This is crucial in real-world traffic, where not all
+neighbouring vehicles exert the same influence on a target vehicle’s trajectory. For example, a vehicle
+directly ahead may have a more significant impact on a vehicle’s movement than one far behind. By
+learning attention weights, the GAT module can prioritize the most influential neighbours, effectively
+modelling the spatial dependencies between vehicles.
+- Output: The output of the GAT layer is a set of updated vehicle representations that incorporate both
+the vehicle’s own trajectory and the influence of nearby vehicles. These updated representations are
+then passed into the LSTM for further temporal modelling.
+2: Fusion Layer (V-LSTM)
+The fusion layer, represented as V-LSTM in the architecture, aggregates the temporal and spatial
+features extracted by the MV-LSTM and GAT modules. The fusion process combines the encoded
+historical trajectories with the learned spatial relationships, resulting in a comprehensive representation
+that accounts for both time-dependent movements and inter-vehicle influences.
+2.1 Vehicle-Level LSTM (V-LSTM)
+After encoding the multi-vehicle interactions and temporal dependencies through the MV-LSTM and
+GAT, the resulting hidden states from these encoders are combined in the fusion layer. The V-LSTM
+receives inputs from both the GAT-enhanced LSTM (which models inter-vehicle relationships) and the
+regular LSTM (which models each vehicle’s temporal history). The fusion mechanism merges these
+representations to produce a unified hidden state for each vehicle, capturing both individual behaviour
+and interaction effects.
+- Temporal-Spatial Fusion: The fusion layer integrates temporal and spatial information to provide a
+richer understanding of each vehicle's trajectory. By combining these sources of information, the model
+can better predict complex behaviours, such as sudden stops or lane changes, which are influenced by
+both a vehicle's own dynamics and the movements of its neighbours.
+- Uncertainty Estimation: In stochastic trajectory prediction, the fusion layer plays a crucial role in
+combining the uncertainty arising from the temporal variability of vehicle motion (captured by LSTM)
+and the uncertainty from interactions with nearby vehicles (captured by GAT). The output can be used
+to parameterize a probabilistic distribution, such as a Gaussian mixture model, from which future
+trajectories can be sampled.
+3: Decoder
+The decoder is responsible for generating future vehicle trajectories based on the encoded information
+from the encoder and fusion layers. The decoder typically consists of another LSTM network that
+predicts the next vehicle position at each future time step, using the hidden states generated by the
+encoder.
+3.1 LSTM-Based Decoder
+The LSTM-based decoder sequentially predicts the future trajectory of each vehicle over a specified
+time horizon (e.g., predicting positions for the next 5 to 10 seconds). The decoder uses the hidden states
+from the encoder to initialize its memory and hidden units, ensuring that the future trajectory predictions
+are grounded in both the vehicle’s past behaviour and its interactions with nearby vehicles.
+- Recurrent Prediction: At each time step, the decoder predicts the next vehicle position based on its
+current hidden state, which is updated with each prediction. This recurrent structure allows the decoder
+to capture the evolving trajectory over time, making predictions that take into account both the vehicle’s
+historical movement and the predicted future positions.
+- Stochastic Trajectory Prediction: In a stochastic setting, the decoder outputs probabilistic distributions
+(such as a Gaussian distribution) over possible future positions rather than a single deterministic
+trajectory. This accounts for the uncertainty inherent in predicting future movements in dynamic
+environments like traffic. By sampling from these distributions, the model can generate multiple
+plausible future trajectories, offering a range of potential outcomes rather than a single prediction.
+3.2 Output: Future Trajectory
+The final output of the decoder is the predicted future trajectory for each vehicle, typically represented
+as a sequence of coordinates over time. In stochastic models, the output may also include uncertainty
+estimates, such as the variance of the predicted positions, which quantify the confidence in the
+predictions. This is crucial for applications like autonomous driving, where the system must account
+for uncertain future movements when planning safe manoeuvres.
+4. Stochastic Modelling and Prediction Uncertainty
+Stochastic models in vehicle trajectory prediction aim to account for the inherent uncertainty in
+predicting future movements, especially in highly dynamic environments like road traffic. Unlike
+deterministic models that output a single predicted trajectory, stochastic models provide probabilistic
+predictions that represent a range of possible outcomes.
+4.1 Probabilistic Output Layer
+The probabilistic output layer is typically the final layer of the decoder, which outputs parameters of a
+probability distribution (such as mean and variance) for each predicted future position. The most
+common distributions used in trajectory prediction are Gaussian or Gaussian Mixture Models (GMMs).
+- Gaussian Distribution: In this case, the model outputs the mean and variance for each predicted future
+position, allowing it to model uncertainty in both the x and y coordinates of the predicted trajectory.
+- Gaussian Mixture Model (GMM): For more complex predictions, a mixture of Gaussians can be used,
+where the model outputs multiple possible trajectories, each with its own probability weight. This
+allows the model to represent multiple possible future scenarios, such as whether a vehicle will turn left
+or right at an intersection.
+4.2 Sampling Mechanism
+During prediction, the model can sample from the output distributions to generate multiple possible
+future trajectories. This is particularly useful in scenarios with high uncertainty, such as when vehicles
+approach intersections or other decision points. By considering multiple samples, the model provides a
+range of possible outcomes, which can be used by downstream modules (e.g., autonomous vehicle
+planning systems) to make safe and robust decisions.
